@@ -1,0 +1,185 @@
+@echo off
+ rem console of Nginx and VbFcgiHost 
+ cls 
+ SET HOST_DIR=%~dp0
+ SET HOST_HOST=127.0.0.1
+ SET HOST_PROCESSES=4
+
+ color 0a 
+ TITLE Nginx And VbFcgiHost console
+ CLS
+ ECHO.
+ ECHO.===========================Nginx And VbFcgiHost console============================= 
+ ECHO. 
+  
+ :MENU 
+ SET I_MENU=1
+ SET START_Nginx=-1
+ SET RESTART_Nginx=-1
+ SET STOP_Nginx=-1
+ SET START_HOST=-1
+ SET RESTART_HOST=-1
+ SET STOP_HOST=-1
+ SET START_Both=-1
+ SET RESTART_Both=-1
+ SET STOP_Both=-1
+ SET EXIT_BAT=-1
+ SET RUNNING_Both=0
+ SET RUNNING_HOST=0  
+ SET RUNNING_Nginx=0
+ ECHO. %RUNNING_HOST%
+ REM Check Host
+ ECHO.***** VbFcgiHost progress list ***** 
+ for /f %%i in ('tasklist ^|findstr /c:"vbFcgiHost.exe"') do set /a RUNNING_HOST+=1
+ tasklist|findstr /i "vbfcgihost.exe"&&echo RESULT: %RUNNING_HOST% vbfcgihost is running ||echo RESULT: No vbfcgihost is running 
+ :: tasklist /NH /FI "imagename eq vbfcgihost.exe"&&echo.vbfcgihost is runinng ||echo none running vbfcgihost 
+ 
+  ECHO. 
+  ECHO. 
+  ::Check Nginx
+  ECHO.***** Nginx progress list *****  
+  for /f %%i in ('tasklist ^|findstr /c:"nginx.exe"') do set /a RUNNING_nginx+=1
+  tasklist|findstr /i "nginx.exe"&&echo RESULT: %RUNNING_Nginx% Nginx is running ||echo RESULT: No nginx is running
+ :: tasklist /NH /FI "imagename eq nginx.exe"&&echo.nginx is runinng ||echo none running nginx 
+   
+
+ECHO. 
+ECHO.List
+ECHO.
+
+   IF %RUNNING_HOST%==0 (SET /a I_MENU+=1 && SET /a START_HOST= %I_MENU% && ECHO.  [%I_MENU%] VbFcgiHost START  ) ELSE (SET /a RUNNING_Both+=1)
+   IF NOT %RUNNING_HOST%==0 (SET /a I_MENU+=1  && SET /a RESTART_HOST = %I_MENU%  && ECHO.  [%I_MENU%] VbFcgiHost RESTART  )
+   IF NOT %RUNNING_HOST%==0 (SET /a I_MENU+=1  && SET /a STOP_HOST = %I_MENU%  && ECHO.  [%I_MENU%] VbFcgiHost SHUTDOWN )
+  ECHO.
+   IF %RUNNING_Nginx%==0 (SET /a I_MENU+=1 && SET /a START_Nginx = %I_MENU% && ECHO.  [%I_MENU%] Nginx START  ) ELSE (SET /a RUNNING_Both+=1)
+   IF NOT %RUNNING_Nginx%==0 (SET /a I_MENU+=1 && SET /a RESTART_Nginx = %I_MENU%  && ECHO.  [%I_MENU%] Nginx RESTART  )
+   IF NOT %RUNNING_Nginx%==0 (SET /a I_MENU+=1 && SET /a STOP_Nginx = %I_MENU%  && ECHO.  [%I_MENU%] Nginx SHUTDOWN )
+   ECHO.  
+
+   IF %RUNNING_Both% LSS 2 (SET /a I_MENU+=1 && SET /a START_Both = %I_MENU%   && ECHO.  [%I_MENU%] Both START  ) 
+   IF %RUNNING_Both% GEQ 1 (SET /a I_MENU+=1 && SET /a RESTART_Both = %I_MENU%   && ECHO.  [%I_MENU%] Both RESTART  )
+   IF %RUNNING_Both% GEQ 1 (SET /a I_MENU+=1 && SET /a STOP_Both = %I_MENU%   && ECHO.  [%I_MENU%] Both SHUTDOWN )
+
+   ECHO.  [0] EXIT 
+ 
+ ECHO. 
+
+ECHO.Please input No.:
+set /p ID=
+     IF "%id%"=="%START_HOST%" GOTO Fun_START_HOST 
+     IF "%id%"=="%RESTART_HOST%" GOTO Fun_RESTART_HOST 
+     IF "%id%"=="%STOP_HOST%" GOTO Fun_STOP_HOST
+     IF "%id%"=="%START_Nginx%" GOTO Fun_STOP_Nginx 
+     IF "%id%"=="%RESTART_Nginx%" GOTO Fun_STOP_Nginx 
+     IF "%id%"=="%STOP_Nginx%" GOTO Fun_STOP_Nginx
+     IF "%id%"=="%START_Both%" GOTO Fun_START_Both
+     IF "%id%"=="%RESTART_Both%" GOTO Fun_RESTART_Both 
+     IF "%id%"=="%STOP_Both%" GOTO Fun_STOP_Both
+     IF "%id%"=="0" EXIT
+ PAUSE
+ Echo Input error! Please try again.
+ goto MENU
+
+ :Fun_START_HOST 
+     call :Sub_startvbfcgihost
+     GOTO MENU
+  
+ :Fun_STOP_HOST 
+     call :Sub_shutdownvbfcgihost
+     GOTO MENU
+  
+ :Fun_RESTART_HOST 
+ echo Fun_RESTART_HOST
+     call :Sub_shutdownvbfcgihost
+     call :Sub_startvbfcgihost
+     GOTO MENU
+
+ :Fun_START_Nginx 
+     call :Sub_startNginx
+     GOTO MENU
+  
+ :Fun_STOP_Nginx 
+     call :Sub_shutdownNginx
+     GOTO MENU
+  
+ :Fun_RESTART_Nginx 
+     call :Sub_shutdownNginx
+     call :Sub_startNginx
+     GOTO MENU
+
+ :Fun_START_Both 
+     IF %RUNNING_Nginx%==0 (call :Sub_startNginx)
+     IF %RUNNING_HOST%==0 (call :Sub_startvbfcgihost)
+     GOTO MENU
+  
+ :Fun_STOP_Both 
+     call :Sub_shutdownvbfcgihost
+     call :Sub_shutdownNginx
+     GOTO MENU
+  
+ :Fun_RESTART_Both 
+     call :Sub_shutdownvbfcgihost
+     call :Sub_shutdownNginx
+     call :Sub_startNginx
+     call :Sub_startvbfcgihost
+     GOTO MENU
+ :Sub_shutdownvbfcgihost
+     ECHO. 
+     ECHO.关闭vbfcgihost...... 
+     :: taskkill /F /IM vbFcgiHost.exe > nul
+     cd "%HOST_DIR%bin\" 
+     start "" vbFcgiHost.exe /stop
+     ECHO.OK,All vbfcgihost processes have been closed
+     choice /t 5 /d y /n >nul 
+    goto :eof
+
+ :Sub_startvbfcgihost
+ 
+     ECHO. 
+     ECHO.Check New dll...... 
+     For /f %%i in (update.txt) do (
+     ECHO.  Checking: %%i.fcgi
+     IF NOT EXIST "%%i.dll" (ECHO.  Result: %%i.fcgi no update) ELSE (
+        IF EXIST "%%i.fcgi" Del "%%i.fcgi"
+	ren "%%i.dll" "%%i.fcgi" 
+	ECHO.  Result: %%i.fcgi updated
+	ECHO.
+	)
+     )
+
+     ECHO.Ready to start VbFcgiHost......
+   
+     cd "%HOST_DIR%bin\" 
+  
+     IF EXIST "%HOST_DIR%bin\vbfcgihost.exe" (
+         ECHO. "Starting VbFcgiHost ......"
+         start "" vbfcgihost.exe /host %HOST_HOST% /port 9100 /spawn %HOST_PROCESSES%
+	 cd..
+     )
+     (ECHO %HOST_DIR%bin\vbfcgihost.exe not exists)
+     ECHO.OK
+     choice /t 2 /d y /n >nul 
+     echo %~dp0
+     goto :eof
+
+
+ :Sub_ShutdownNginx
+     ECHO. 
+     ECHO.Close Nginx...... 
+     taskkill /F /IM nginx.exe > nul
+     ECHO.OK,All nginx processes have been closed.
+     choice /t 5 /d y /n >nul 
+    goto :eof
+
+:Sub_StartNginx
+
+     ECHO.Ready to start Nginx......
+     cd /d "%HOST_DIR%bin\nginx" 
+     IF EXIST "%HOST_DIR%bin\nginx\nginx.exe" (
+         echo "Starting nginx.exe ......"
+         start "" nginx.exe
+         cd..
+	 cd..
+      )else (ECHO %HOST_DIR%\nginx\nginx.exe not exists)
+
+     goto :eof 
